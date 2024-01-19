@@ -22,6 +22,8 @@ function authenticateToken(req, res, next) {
 app.post('/new', async (req, res) => {
     try {
         const newProduct = new product(req.body);
+        
+        const newProduct2 = new product(req.body);
 
         const result = await newProduct.save();
 
