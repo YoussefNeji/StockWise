@@ -1,12 +1,12 @@
 const mongoose = require ("mongoose");
 
 const productSchema =new mongoose.Schema({
-
+    // _id:String,
     productName : String,
     Prix :Number,
     nbStock :Number,
-    dateEntre : Date,
-    idCategories: String,
+    categorieName: String,
+    createdBy:String,
     
 });
 
