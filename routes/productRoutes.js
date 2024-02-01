@@ -3,6 +3,7 @@ const app = express.Router();
 
 const product = require('../models/productSchema');
 const history = require('../models/historySchema');
+const categorie = require('../models/categoriesSchema');
 const jwt = require('jsonwebtoken');
 
 app.use(express.json());
@@ -19,69 +20,98 @@ function authenticateToken(req, res, next) {
     })
   }
 
-app.post('/new', async (req, res) => {
+  app.post('/createproduct/:name', async (req, res) => {
     try {
-        const newProduct = new product(req.body);
-        
-        const newProduct2 = new product(req.body);
+      const newProduct = new product();
+      newProduct.productName = req.body.productName;
+      newProduct.Prix = req.body.Prix;
+      newProduct.nbStock = req.body.nbStock;
+      newProduct.categorieName = req.body.categorieName;
+      newProduct.createdBy = req.params.name;
+      const result = await newProduct.save();
+      
 
-        const result = await newProduct.save();
 
-        const historyProduct = new history();
-        historyProduct.productId = result.id;
-        historyProduct.nb_Befor_Update = result.nbStock;
-        historyProduct.nb_After_Update = result.nbStock;
-        historyProduct.dateUpdate = Date.now();
-        await historyProduct.save();
-        res.status(201).json(result);
 
+      res.status(201).json(result);
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ error: 'Internal Server Error' });
-
+      console.log(error);
+      res.status(500).json({ error: 'Internal Server Error' });
     }
-});
+  });
 
-app.delete('/:id',authenticateToken, (req, res) => { 
-    product.findByIdAndDelete(req.params.id).then((product) => {
+  app.delete('/deleteProduct/:id', (req, res) => {
+    product
+      .findByIdAndDelete(req.params.id)
+      .then((product) => {
         if (!product) {
-            return res.status(404).send();
+          return res.status(404).send();
         }
         res.send(product);
-
-
-
-    }).catch((error) => {
+      })
+      .catch((error) => {
         res.status(500).send(error);
-    });
-});
+      });
+  });
 
-app.patch('/api/product/:id',authenticateToken, async (req, res) => {
+  app.patch('/update/:id', async (req, res) => {
     try {
-        const existingProduct = await product.findById(req.params.id);
+      const oldProductId = req.params.id;
+      const updatedProduct = req.body;
+  
+      console.log(oldProductId);
+      console.log(updatedProduct);
 
-        if (!existingProduct) {
-            return res.status(404).send({ error: 'Product not found' });
-        }
+      const foundedproducts = await product.findOne({ _id : oldProductId});
+      console.log("the founded prodect is ",foundedproducts);
+      const ProductBeforUpdate = product.find({ _id: oldProductId });
+      const updatedP = await product.findOneAndUpdate( 
+        { _id: oldProductId },
+        {
+          $set: {
+            productName: updatedProduct.productName,
+            Prix: updatedProduct.Prix,
+            nbStock: updatedProduct.nbStock,
+            categorieName: updatedProduct.categorieName,
+          },
+        },
+        { new: true }
+      );
 
-        const updatedProduct = await product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      const historyProduct = new history();
+      historyProduct.productId = updatedP._id; // Assuming _id is the product ID
+      historyProduct.productName = updatedP.productName;
+      historyProduct.old_prix = ProductBeforUpdate.Prix; // Assuming Prix is the price
+      historyProduct.new_prix = updatedProduct.Prix; // Assuming Prix is the price in updatedProduct
+      historyProduct.oldnbStock = ProductBeforUpdate.nbStock;
+      historyProduct.newnbStock = updatedProduct.nbStock;
+      historyProduct.dateUpdate = Date.now();
+      
 
-        if (!updatedProduct) {
-            return res.status(500).send({ error: 'Failed to update product' });
-        }
+      await historyProduct.save();
 
-        const historyProductUpdate = new history();
-        historyProductUpdate.productId = updatedProduct.id;
-        historyProductUpdate.nb_Before_Update = existingProduct.nbStock;
-        historyProductUpdate.nb_After_Update = updatedProduct.nbStock;
-        historyProductUpdate.dateUpdate = Date.now();
-
-        await historyProductUpdate.save();
-
-        res.send(updatedProduct);
+      if (!updatedP) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+      res.status(200).json(updatedP);
     } catch (error) {
-        console.error(error);
-        res.status(500).send({ error: 'Internal server error' });
+      console.error(error);
+      res.status(500).json({ error: 'Internal server error' });
     }
-});
+  });
+  
+
+  app.get('/getallproducts/:createdBy', async (req, res) => {
+    try {
+      const createdBy = req.params.createdBy;
+      const foundedproducts = await product.find({createdBy : createdBy});
+      res.status(200).json(foundedproducts);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+  
+  
+
 module.exports = app

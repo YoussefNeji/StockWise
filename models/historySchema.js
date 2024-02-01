@@ -4,8 +4,11 @@ const mongoose = require ("mongoose");
 const historySchema =new mongoose.Schema({
 
     productId :String,
-    nb_Befor_Update:Number,
-    nb_After_Update:Number,
+    productName:String,
+    old_prix:Number,
+    new_prix:Number,
+    oldnbStock:Number,
+    newnbStock: Number,
     dateUpdate : Date,
 });
 
